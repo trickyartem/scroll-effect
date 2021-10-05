@@ -1,115 +1,161 @@
-const canvas = document.createElement('canvas');
-const c      = canvas.getContext('2d');
+interface CanvasOptions {
+	width: number;
+	height: number;
+	style: Partial<CSSStyleDeclaration>;
+}
 
-canvas.width          = window.innerWidth;
-canvas.height         = window.innerHeight;
-canvas.style.position = 'fixed';
-canvas.style.top      = '0';
-canvas.style.left     = '0';
-canvas.style.zIndex   = '-9';
+class Utils {
+	static randomIntFromRange(min: number, max: number) {
+		return Math.floor(Math.random() * (max - min + 1) + min)
+	}
+
+	static randomColor(col: string[]) {
+		return col[Math.floor(Math.random() * col.length)]
+	}
+}
+
+class Canvas {
+	private canvas = document.createElement('canvas');
+	context = this.canvas.getContext('2d');
+
+	constructor(options: CanvasOptions) {
+		const { width, height, style } = options;
+
+		this.canvas.width = width;
+		this.canvas.height = height;
+
+		Object.assign(this.canvas.style, style)
+	}
+
+	getHTMLElement() {
+		return this.canvas;
+	}
+
+	resize(width: number, height: number) {
+		this.canvas.width = width;
+		this.canvas.height = height;
+	}
+
+	getCanvasSize() {
+		const { width, height } = this.canvas;
+
+		return {
+			width, height
+		}
+	}
+}
+
+const canvas = new Canvas({
+	width: window.innerWidth,
+	height: window.innerHeight,
+	style: {
+		position: 'fixed',
+		top: '0',
+		left: '0',
+		zIndex: '-9',
+	}
+});
 
 const body = document.getElementsByTagName('body')[0];
-body.appendChild(canvas);
+body.appendChild(canvas.getHTMLElement());
 
 body.style.height = '2000px';
 
 addEventListener('resize', () => {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-
-    init();
+	canvas.resize(window.innerWidth, window.innerHeight)
+	init();
 });
 
-class Utils {
-    static randomIntFromRange(min: number, max: number) {
-        return Math.floor(Math.random() * (max - min + 1) + min)
-    }
 
-    static randomColor(col: string[]) {
-        return col[Math.floor(Math.random() * col.length)]
-    }
-}
-
-var scrollPos = 0;
+let scrollPos = 0;
 
 window.addEventListener('scroll', () => {
-    if ((document.body.getBoundingClientRect()).top > scrollPos) {
-        for (const move_up of circle_array) {
-            move_up.scroll_move_up();
-        }
-    }
-    else {
-        for (const move_down of circle_array) {
-            move_down.scroll_move_down();
-        }
-    }
-    scrollPos = (document.body.getBoundingClientRect()).top;
+	if ((document.body.getBoundingClientRect()).top > scrollPos) {
+		for (const move_up of circles) {
+			move_up.scrollMoveUp();
+		}
+	} else {
+		for (const move_down of circles) {
+			move_down.scrollMoveDown();
+		}
+	}
+	scrollPos = (document.body.getBoundingClientRect()).top;
 });
 
 class Circle {
-    public dy      : number;
-    public gravity : number;
-    public friction: number
+	public dy: number;
+	public gravity: number;
+	public friction: number
 
-    constructor(private x: number, private y: number, private radius: number) {
-        this.dy       = 10;
-        this.gravity  = 1;
-        this.friction = 0.99;
-    }
-    
-    draw() {
-        c.beginPath();
-        c.fillStyle   = 'purple';
-        c.strokeStyle = 'black';
-        c.arc(this.x, this.y, this.radius, 0, 360, false);
-        c.stroke();
-        c.fill();
-        c.closePath();
-    }
+	constructor(
+		public canvas: Canvas,
+		private x: number,
+		private y: number,
+		private radius: number
+	) {
+		this.dy = 10;
+		this.gravity = 1;
+		this.friction = 0.99;
+	}
 
-    scroll_move_down() {
-        this.dy       = 0;
-        this.friction = 0;
-        this.gravity  = 0;
-    }
+	draw() {
+		this.canvas.context.beginPath();
+		this.canvas.context.fillStyle = 'purple';
+		this.canvas.context.strokeStyle = 'blathis.canvas.contextk';
+		this.canvas.context.arc(this.x, this.y, this.radius, 0, 360, false);
+		this.canvas.context.stroke();
+		this.canvas.context.fill();
+		this.canvas.context.closePath();
+	}
 
-    scroll_move_up() {
-        this.dy       = -10;
-        this.friction = 0.99;
-        this.gravity  = 1;
-    }
+	scrollMoveDown() {
+		this.dy = 0;
+		this.friction = 0;
+		this.gravity = 0;
+	}
 
-    scroll_off() {
-        if(this.y + this.radius > innerHeight - 10 || this.y - this.radius < 0) { this.dy *= -1 * this.friction }
-        else { this.dy += this.gravity }
+	scrollMoveUp() {
+		this.dy = -10;
+		this.friction = 0.99;
+		this.gravity = 1;
+	}
 
-        this.y += this.dy;
-    }
+	scrollOff() {
+		if (this.y + this.radius > innerHeight - 10 || this.y - this.radius < 0) {
+			this.dy *= -1 * this.friction
+		} else {
+			this.dy += this.gravity
+		}
+
+		this.y += this.dy;
+	}
 }
 
-let circle_array: Array<Circle> = [];
+let circles: Array<Circle> = [];
+
 function init() {
-    circle_array = [];
+	circles = [];
 
-    for (let i = 0; i < 10; i++) {
-        let radius = 40;
-        let x      = Utils.randomIntFromRange(radius, canvas.width  - radius);
-        let y      = Utils.randomIntFromRange(radius, canvas.height / 2);
+	for (let i = 0; i < 10; i++) {
+		const { width, height } = canvas.getCanvasSize();
+		let radius = 40;
+		let x = Utils.randomIntFromRange(radius, width - radius);
+		let y = Utils.randomIntFromRange(radius, height / 2);
 
-        circle_array.push(new Circle(x, y, radius));
-    }
+		circles.push(new Circle(canvas, x, y, radius));
+	}
 }
 
 init();
 
 function animate() {
-    c.clearRect(0, 0, innerWidth, innerHeight);
-    for (const show of circle_array) {
-        show.draw();
-        show.scroll_off();
-    }
+	canvas.context.clearRect(0, 0, innerWidth, innerHeight);
+	for (const show of circles) {
+		show.draw();
+		show.scrollOff();
+	}
 
-    requestAnimationFrame(() => animate());
+	requestAnimationFrame(() => animate());
 }
 
 animate();
